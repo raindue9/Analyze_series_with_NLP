@@ -10,6 +10,7 @@ from ast import literal_eval
 folder_path = pathlib.Path().parent.resolve()
 sys.path.append(os.path.join(folder_path, '../'))
 
+
 class NamedEntityRecognizer:
     def __init__(self):
         # spacy.require_gpu()
@@ -40,7 +41,7 @@ class NamedEntityRecognizer:
         return ner_output
 
     def get_ners(self, dataset_path, save_path=None):
-        if save_path is None and os.path.exists(save_path):
+        if save_path is not None and os.path.exists(save_path):
             df = pd.read_csv(save_path)
             df['ners'] = df['ners'].apply(lambda x: literal_eval(x) if isinstance(x, str) else x)
             return df
@@ -48,7 +49,7 @@ class NamedEntityRecognizer:
         # load dataset
         df = load_subtitles_dataset(dataset_path)
         # 缺少GPU 则只设置10
-        df = df.head(10)
+        # df = df.head(10)
         # Run Inferences
         df['ners'] = df['script'].apply(self.get_ners_inference)
 
