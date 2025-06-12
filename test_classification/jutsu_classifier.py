@@ -17,7 +17,7 @@ class JutsuClassifier():
                  data_path=None,
                  text_column_name='text',
                  label_column_name='jutsu',
-                 model_name= 'distilbert/distilbert-base-uncased',
+                 model_name='distilbert/distilbert-base-uncased',
                  test_size=0.2,
                  num_labels=3,
                  huggingface_token=None
