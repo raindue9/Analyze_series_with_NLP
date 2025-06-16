@@ -1,17 +1,18 @@
-import gc
 import pandas as pd
+import torch
 import re
-import torch.cuda
 import huggingface_hub
-import transformers
 from datasets import Dataset
+import transformers
 from transformers import (
     BitsAndBytesConfig,
     AutoModelForCausalLM,
-    AutoTokenizer
+    AutoTokenizer,
 )
 from peft import LoraConfig, PeftModel
 from trl import SFTConfig, SFTTrainer
+import gc
+
 
 # Remove actions from transcript
 def remove_paranthesis(text):
@@ -20,10 +21,11 @@ def remove_paranthesis(text):
 
 
 class CharacterChatBot():
+
     def __init__(self,
                  model_path,
-                 data_path="/content/data/naruto.csv",
-                 huggingface_token=None,
+                 data_path="C:/Pycharm/YOLO/analyze_series_with_NLP/data/naruto.csv",
+                 huggingface_token=None
                  ):
 
         self.model_path = model_path
@@ -49,9 +51,9 @@ class CharacterChatBot():
         messages.append({"role": "system",
                          "content": """"Your are Naruto from the anime "Naruto". Your responses should reflect his personality and speech patterns \n"""})
 
-        for message_and_response in history:
-            messages.append({"role": "user", "content": message_and_response[0]})
-            messages.append({"role": "assistant", "content": message_and_response[1]})
+        for message_and_respnse in history:
+            messages.append({"role": "user", "content": message_and_respnse[0]})
+            messages.append({"role": "assistant", "content": message_and_respnse[1]})
 
         messages.append({"role": "user", "content": message})
 
@@ -71,24 +73,25 @@ class CharacterChatBot():
 
         output_message = output[0]['generated_text'][-1]
         return output_message
+
     def load_model(self, model_path):
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.float16,
-
         )
         pipeline = transformers.pipeline("text-generation",
-                                         model = model_path,
+                                         model=model_path,
                                          model_kwargs={"torch_dtype": torch.float16,
-                                                       "quantization_config": bnb_config},
+                                                       "quantization_config": bnb_config,
+                                                       }
                                          )
-
+        return pipeline
 
     def train(self,
               base_model_name_or_path,
               dataset,
-              output_dir='./results',
+              output_dir="./results",
               per_device_train_batch_size=1,
               gradient_accumulation_steps=1,
               optim="paged_adamw_32bit",
@@ -98,22 +101,22 @@ class CharacterChatBot():
               max_grad_norm=0.3,
               max_steps=300,
               warmup_ratio=0.3,
-              lr_scheduler_type="constant"
+              lr_scheduler_type="constant",
               ):
+
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.float16,
-            
         )
 
         model = AutoModelForCausalLM.from_pretrained(base_model_name_or_path,
-                                                     quntization_config=bnb_config,
+                                                     quantization_config=bnb_config,
                                                      trust_remote_code=True)
         model.config.use_cache = False
 
-        tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path)
-        tokenizer.pad_token = tokenizer.eos_token
+        toknizer = AutoTokenizer.from_pretrained(base_model_name_or_path)
+        toknizer.pad_token = toknizer.eos_token
 
         lora_alpha = 16
         lora_dropout = 0.1
@@ -126,10 +129,11 @@ class CharacterChatBot():
             bias="none",
             task_type="CASUAL_LM"
         )
+
         training_arguments = SFTConfig(
             output_dir=output_dir,
             per_device_train_batch_size=per_device_train_batch_size,
-            gradient_accumulation_steps=1,
+            gradient_accumulation_steps=gradient_accumulation_steps,
             optim=optim,
             save_steps=save_steps,
             logging_steps=logging_steps,
@@ -147,11 +151,11 @@ class CharacterChatBot():
 
         trainer = SFTTrainer(
             model=model,
-            training_dataset=dataset,
+            train_dataset=dataset,
             peft_config=peft_config,
             dataset_text_field="prompt",
-            max_seq_len=max_seq_len,
-            tokenizer=tokenizer,
+            max_seq_length=max_seq_len,
+            tokenizer=toknizer,
             args=training_arguments,
         )
 
@@ -159,24 +163,26 @@ class CharacterChatBot():
 
         # Save model
         trainer.model.save_pretrained("final_ckpt")
-        tokenizer.save_pretrained("final_ckpt")
+        toknizer.save_pretrained("final_ckpt")
 
         # Flush memory
-        del trainer,model
+        del trainer, model
         gc.collect()
 
         base_model = AutoModelForCausalLM.from_pretrained(base_model_name_or_path,
                                                           return_dict=True,
-                                                          quntization_config=bnb_config,
+                                                          quantization_config=bnb_config,
                                                           torch_dtype=torch.float16,
-                                                          device_map=self.device)
+                                                          device_map=self.device
+                                                          )
+
         tokenizer = AutoTokenizer.from_pretrained(base_model_name_or_path)
 
         model = PeftModel.from_pretrained(base_model, "final_ckpt")
         model.push_to_hub(self.model_path)
         tokenizer.push_to_hub(self.model_path)
 
-        # Flush memory
+        # Flush Memory
         del model, base_model
         gc.collect()
 
@@ -187,19 +193,16 @@ class CharacterChatBot():
         naruto_transcript_df['number_of_words'] = naruto_transcript_df['line'].str.strip().str.split(" ")
         naruto_transcript_df['number_of_words'] = naruto_transcript_df['number_of_words'].apply(lambda x: len(x))
         naruto_transcript_df['naruto_response_flag'] = 0
-        naruto_transcript_df.loc[
-            (naruto_transcript_df['name'] == "Naruto") & (naruto_transcript_df['number_of_words'] > 5), (
-                'naruto_response_flag')] = 1
+        naruto_transcript_df.loc[(naruto_transcript_df['name'] == "Naruto") & (
+                    naruto_transcript_df['number_of_words'] > 5), 'naruto_response_flag'] = 1
 
         indexes_to_take = list(naruto_transcript_df[(naruto_transcript_df['naruto_response_flag'] == 1) & (
                     naruto_transcript_df.index > 0)].index)
 
-        system_prompt = """You are Naruto from the anime "Naruto". You responses 
-                           should reflect his personality and patterns  \n"""
-
+        system_promt = """" Your are Naruto from the anime "Naruto". Your responses should reflect his personality and speech patterns \n"""
         prompts = []
         for ind in indexes_to_take:
-            prompt = system_prompt
+            prompt = system_promt
 
             prompt += naruto_transcript_df.iloc[ind - 1]['line']
             prompt += '\n'
@@ -210,10 +213,6 @@ class CharacterChatBot():
         dataset = Dataset.from_pandas(df)
 
         return dataset
-
-
-
-
 
 
 
