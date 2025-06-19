@@ -124,11 +124,11 @@ if __name__ == "__main__":
     main()
 
     # friendship,hope,sacrifice,battle,self development,betrayal,love,dialogue
-    # C:\Pycharm\YOLO\analyze_series_with_NLP\data\Subtitles
-    # C:\Pycharm\YOLO\analyze_series_with_NLP\stubs\theme_classifier_output.csv
+    # analyze_series_with_NLP\data\Subtitles
+    # analyze_series_with_NLP\stubs\theme_classifier_output.csv
 
-    # C:\Pycharm\YOLO\analyze_series_with_NLP\data\Subtitles
-    # C:\Pycharm\YOLO\analyze_series_with_NLP\stubs\ner_output.csv
+    # analyze_series_with_NLP\data\Subtitles
+    # analyze_series_with_NLP\stubs\ner_output.csv
     # raindue07/jutsu-classifier
-    # C:\Pycharm\YOLO\analyze_series_with_NLP\data\jutsus.jsonl
+    # analyze_series_with_NLP\data\jutsus.jsonl
 
